@@ -1,0 +1,82 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.preprocessing import LabelEncoder
+
+file_path = r'C:\Users\Administrator\Downloads\car data (1).csv'
+df = pd.read_csv(file_path)
+
+print("First 5 rows:\n", df.head())
+print("Column names:\n", df.columns)
+
+df.rename(columns={'Kms_Driven': 'Driven_kms', 'Seller_Type': 'Selling_type'}, inplace=True)
+
+le = LabelEncoder()
+if 'Fuel_Type' in df.columns:
+    df['Fuel_Type'] = le.fit_transform(df['Fuel_Type'])
+if 'Selling_type' in df.columns:
+    df['Selling_type'] = le.fit_transform(df['Selling_type'])
+if 'Transmission' in df.columns:
+    df['Transmission'] = le.fit_transform(df['Transmission'])
+
+if 'Car_Name' in df.columns:
+    df.drop('Car_Name', axis=1, inplace=True)
+
+X = df.drop('Selling_Price', axis=1)
+y = df['Selling_Price']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+print("\n--- Model Evaluation ---")
+print("Mean Absolute Error (MAE):", mean_absolute_error(y_test, y_pred))
+print("Mean Squared Error (MSE):", mean_squared_error(y_test, y_pred))
+print("Root Mean Squared Error (RMSE):", np.sqrt(mean_squared_error(y_test, y_pred)))
+print("R^2 Score:", r2_score(y_test, y_pred))
+
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x=y_test, y=y_pred)
+plt.xlabel("Actual Price")
+plt.ylabel("Predicted Price")
+plt.title("Actual vs Predicted Car Prices")
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
+plt.tight_layout()
+plt.show()
+
+fuel_type_dict = {'Petrol': 2, 'Diesel': 0, 'CNG': 1}
+selling_type_dict = {'Dealer': 0, 'Individual': 1}
+transmission_dict = {'Manual': 1, 'Automatic': 0}
+
+print("\n--- Car Selling Price Estimator ---")
+try:
+    year = int(input("Enter Year of Purchase (e.g., 2018): "))
+    present_price = float(input("Enter Present Price of the car (in lakhs, e.g., 5.2): "))
+    kms_driven = int(input("Enter Kilometers Driven: "))
+    fuel_type_input = input("Enter Fuel Type (Petrol/Diesel/CNG): ").capitalize()
+    seller_type_input = input("Enter Seller Type (Dealer/Individual): ").capitalize()
+    transmission_input = input("Enter Transmission Type (Manual/Automatic): ").capitalize()
+    owner = int(input("Enter Number of Previous Owners (0/1/3): "))
+
+    input_df = pd.DataFrame([{
+        'Year': year,
+        'Present_Price': present_price,
+        'Driven_kms': kms_driven,
+        'Fuel_Type': fuel_type_dict.get(fuel_type_input, 2),
+        'Selling_type': selling_type_dict.get(seller_type_input, 0),
+        'Transmission': transmission_dict.get(transmission_input, 1),
+        'Owner': owner
+    }])
+
+    predicted_price = model.predict(input_df)[0]
+    print("Estimated Selling Price: ₹{:.2f} lakhs".format(predicted_price))
+
+except Exception as e:
+    print("Error in input:", e)
